@@ -1,0 +1,35 @@
+name: Validate dogpile.cache hook
+
+on:
+  push:
+    branches: [validation-dogpile-cache]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  freeze:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    env:
+      PYINSTALLER_STRICT_UNPACK_MODE: '1'
+      PYINSTALLER_STRICT_COLLECT_MODE: '1'
+      PYINSTALLER_STRICT_BUNDLE_CODESIGN_ERROR: '1'
+      PYINSTALLER_VERIFY_BUNDLE_SIGNATURE: '1'
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.14'
+      - name: Install test dependencies
+        run: python -m pip install -e . -r requirements-test.txt pyinstaller==6.22.3 dogpile.cache==1.5.0 flake8
+      - name: Check formatting and release note
+        run: |
+          python -m flake8
+          python scripts/verify-news-fragments.py
+      - name: Build and run frozen cache applications
+        run: python -m pytest tests/test_libraries.py::test_dogpile_cache
